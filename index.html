@@ -373,7 +373,7 @@ function switchView(v){
 }
 
 //// ---------- 重载 ----------
-async function reload(){ITEMS=await allItems();renderFilters();renderCloset();const me=$("#meStat");if(me)me.textContent=`共 ${ITEMS.length} 件（含已淘汰 ${ITEMS.filter(i=>i.retired).length}）`}
+async function reload(){ITEMS=await allItems();renderFilters();renderCloset();const me=$("#meStat");if(me){let st="";try{if(navigator.storage&&navigator.storage.estimate){const e=await navigator.storage.estimate();st+=` · 已用 ${(e.usage/1048576).toFixed(1)}MB`}if(navigator.storage&&navigator.storage.persisted){st+=(await navigator.storage.persisted())?" · 持久化已开✅":" · 持久化未开⚠️"}}catch(_){}me.textContent=`共 ${ITEMS.length} 件（含已淘汰 ${ITEMS.filter(i=>i.retired).length}）${st}`}}
 
 //// ---------- 事件绑定 ----------
 function bind(){
@@ -412,7 +412,10 @@ function bind(){
 }
 
 //// ---------- init ----------
-(async function(){buildTagRows();syncTagUI();bind();await reload();
+(async function(){buildTagRows();syncTagUI();bind();
+  // 请求持久化存储，降低系统自动清理风险（iOS 加到主屏后基本不会被清）
+  try{if(navigator.storage&&navigator.storage.persist){const p=navigator.storage.persisted?await navigator.storage.persisted():false;if(!p)await navigator.storage.persist()}}catch(e){}
+  await reload();
   if("serviceWorker"in navigator){try{await navigator.serviceWorker.register("sw.js")}catch(e){}}
 })();
 </script>
