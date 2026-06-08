@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>我的衣橱</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  :root{--bg:#0f172a;--bg2:#1e293b;--card:#1e293b;--line:#334155;--txt:#e2e8f0;--mut:#94a3b8;--dim:#64748b;--acc:#818cf8;--acc2:#38bdf8;--ok:#34d399;--warn:#fbbf24;--bad:#fb7185}
+  html,body{background:var(--bg);color:var(--txt);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;height:100%}
+  body{padding-bottom:calc(68px + env(safe-area-inset-bottom))}
+  .topbar{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,var(--bg),rgba(15,23,42,.85));backdrop-filter:blur(10px);padding:calc(14px + env(safe-area-inset-top)) 18px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
+  .topbar h1{font-size:19px;font-weight:800;letter-spacing:.5px}
+  .topbar .sub{font-size:12px;color:var(--mut);margin-top:2px}
+  .wrap{padding:16px 14px}
+  .view{display:none}.view.on{display:block;animation:fade .25s}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  /* nav */
+  .nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;background:rgba(30,41,59,.96);backdrop-filter:blur(12px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+  .nav button{flex:1;background:none;border:none;color:var(--dim);font-size:11px;padding:9px 0 7px;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:inherit}
+  .nav button .ic{font-size:20px;line-height:1}
+  .nav button.on{color:var(--acc)}
+
+  /* gallery */
+  .filters{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;scrollbar-width:none}.filters::-webkit-scrollbar{display:none}
+  .chip{flex:none;padding:6px 13px;border-radius:20px;background:var(--bg2);border:1px solid var(--line);color:var(--mut);font-size:13px}
+  .chip.on{background:var(--acc);border-color:var(--acc);color:#0b1120;font-weight:700}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  .item{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;position:relative}
+  .item .ph{width:100%;aspect-ratio:3/4;object-fit:cover;background:#0b1120;display:block}
+  .item .noph{width:100%;aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;font-size:38px;background:#0b1120;color:#334155}
+  .item .meta{padding:8px 10px}
+  .item .nm{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .item .tg{font-size:11px;color:var(--mut);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .item .worn{position:absolute;top:8px;right:8px;background:rgba(15,23,42,.78);border:1px solid var(--line);border-radius:8px;font-size:10px;padding:2px 6px;color:var(--mut)}
+  .empty{text-align:center;color:var(--dim);padding:60px 20px;font-size:14px;line-height:1.7}
+
+  /* form */
+  label{display:block;font-size:13px;color:var(--mut);margin:16px 0 7px;font-weight:600}
+  input[type=text],textarea,select{width:100%;background:var(--bg2);border:1px solid var(--line);border-radius:11px;color:var(--txt);padding:12px;font-size:15px;font-family:inherit}
+  textarea{min-height:62px;resize:vertical}
+  .photopick{width:100%;aspect-ratio:4/3;border:2px dashed var(--line);border-radius:14px;background:var(--bg2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--dim);overflow:hidden;position:relative}
+  .photopick img{width:100%;height:100%;object-fit:cover}
+  .photopick .hint{font-size:13px}
+  .tagrow{display:flex;flex-wrap:wrap;gap:8px}
+  .tag{padding:7px 13px;border-radius:10px;background:var(--bg2);border:1px solid var(--line);color:var(--mut);font-size:13px}
+  .tag.on{background:rgba(129,140,248,.18);border-color:var(--acc);color:#c7d2fe;font-weight:600}
+  .btn{display:block;width:100%;text-align:center;padding:14px;border-radius:12px;border:none;font-size:15px;font-weight:700;font-family:inherit;margin-top:20px}
+  .btn.primary{background:linear-gradient(90deg,var(--acc2),var(--acc));color:#0b1120}
+  .btn.ghost{background:var(--bg2);color:var(--txt);border:1px solid var(--line)}
+  .btn.danger{background:rgba(251,113,133,.14);color:var(--bad);border:1px solid #7f1d1d}
+  .btn:active{transform:scale(.99)}
+  .btnrow{display:flex;gap:10px}.btnrow .btn{flex:1}
+  .aibtn{margin-top:10px;font-size:13px;padding:10px;background:rgba(56,189,248,.12);border:1px solid #0e7490;color:var(--acc2);border-radius:10px;width:100%;font-family:inherit;font-weight:600}
+
+  /* detail / modal */
+  .modal{position:fixed;inset:0;z-index:50;background:rgba(2,6,23,.66);backdrop-filter:blur(4px);display:none;align-items:flex-end}
+  .modal.on{display:flex;animation:fade .2s}
+  .sheet{background:var(--bg);border-radius:20px 20px 0 0;width:100%;max-height:90vh;overflow-y:auto;border-top:1px solid var(--line);padding:8px 16px calc(24px + env(safe-area-inset-bottom))}
+  .grab{width:40px;height:4px;background:var(--line);border-radius:3px;margin:8px auto 12px}
+  .dph{width:100%;max-height:46vh;object-fit:contain;border-radius:14px;background:#0b1120}
+  .dtitle{font-size:21px;font-weight:800;margin:14px 0 4px}
+  .pills{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+  .pill{font-size:12px;padding:4px 10px;border-radius:8px;background:var(--bg2);border:1px solid var(--line);color:var(--mut)}
+  .stat{display:flex;gap:14px;margin:14px 0;padding:12px;background:var(--bg2);border-radius:12px;border:1px solid var(--line)}
+  .stat div{flex:1;text-align:center}.stat .n{font-size:20px;font-weight:800}.stat .l{font-size:11px;color:var(--dim);margin-top:2px}
+
+  /* outfit cards */
+  .outfit{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px}
+  .outfit h3{font-size:16px;margin-bottom:4px}
+  .outfit .why{font-size:13px;color:var(--mut);line-height:1.6;margin-bottom:10px}
+  .outfit .pieces{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}.outfit .pieces::-webkit-scrollbar{display:none}
+  .piece{flex:none;width:84px}
+  .piece img,.piece .nop{width:84px;height:108px;border-radius:10px;object-fit:cover;background:#0b1120;display:flex;align-items:center;justify-content:center;font-size:26px;color:#334155}
+  .piece span{display:block;font-size:11px;color:var(--mut);margin-top:4px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .miss{font-size:11px;color:var(--warn)}
+
+  .retire{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px;margin-bottom:10px}
+  .retire img,.retire .nop{width:58px;height:74px;border-radius:10px;object-fit:cover;flex:none;background:#0b1120;display:flex;align-items:center;justify-content:center;font-size:22px;color:#334155}
+  .retire .ri{flex:1;min-width:0}
+  .retire .ri .nm{font-size:15px;font-weight:600}
+  .retire .ri .d{font-size:12px;margin-top:3px}
+  .days-bad{color:var(--bad)}.days-warn{color:var(--warn)}.days-ok{color:var(--ok)}
+  .spin{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-3px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#020617;border:1px solid var(--line);color:var(--txt);padding:10px 18px;border-radius:24px;font-size:14px;z-index:99;opacity:0;transition:.25s;pointer-events:none;white-space:nowrap}
+  .toast.on{opacity:1}
+  .note{font-size:12px;color:var(--dim);line-height:1.6;margin-top:8px}
+  .seg{display:flex;gap:8px;margin-bottom:14px}
+  .seg button{flex:1;padding:10px;border-radius:10px;background:var(--bg2);border:1px solid var(--line);color:var(--mut);font-family:inherit;font-size:14px}
+  .seg button.on{background:var(--acc);border-color:var(--acc);color:#0b1120;font-weight:700}
+  .kv{font-size:13px;color:var(--mut);margin:6px 0}
+</style>
+</head>
+<body>
+<div class="topbar"><div><h1 id="ttl">👕 我的衣橱</h1><div class="sub" id="tsub">本地存储 · 只你自己看得到</div></div><div id="cnt" style="font-size:13px;color:var(--mut)"></div></div>
+
+<div class="wrap">
+  <!-- 衣橱 -->
+  <section id="v-closet" class="view on">
+    <div class="filters" id="filters"></div>
+    <div class="grid" id="grid"></div>
+    <div class="empty" id="closetEmpty" style="display:none">衣橱还是空的 👻<br>点下面「＋ 添加」拍一件衣服开始吧</div>
+  </section>
+
+  <!-- 添加 -->
+  <section id="v-add" class="view">
+    <label>照片</label>
+    <div class="photopick" id="photopick">
+      <span style="font-size:34px">📷</span><span class="hint">点这里 拍照 / 从相册选</span>
+      <input type="file" id="photoInput" accept="image/*" style="position:absolute;inset:0;opacity:0" >
+    </div>
+    <button class="aibtn" id="aiTagBtn">✨ AI 自动识别打标（拍照后点这里）</button>
+
+    <label>名称</label>
+    <input type="text" id="f-name" placeholder="例：藏蓝色亚麻衬衫">
+
+    <label>品类</label>
+    <div class="tagrow" id="catRow"></div>
+
+    <label>颜色</label>
+    <div class="tagrow" id="colorRow"></div>
+
+    <label>适合季节</label>
+    <div class="tagrow" id="seasonRow"></div>
+
+    <label>风格</label>
+    <div class="tagrow" id="styleRow"></div>
+
+    <label>备注（可选）</label>
+    <textarea id="f-notes" placeholder="搭配心得、购于哪里、尺码…"></textarea>
+
+    <div class="btnrow">
+      <button class="btn ghost" id="addCancel">清空</button>
+      <button class="btn primary" id="addSave">保存进衣橱</button>
+    </div>
+  </section>
+
+  <!-- 搭配 -->
+  <section id="v-style" class="view">
+    <div class="seg"><button class="on" data-mode="prompt">按需求推荐</button><button data-mode="auto">智能搭配</button></div>
+    <div id="promptBox">
+      <label>说出你的场景</label>
+      <textarea id="promptInput" placeholder="例：周末去内蒙大草原，帮我推荐4套草原穿搭，要好拍照又防晒"></textarea>
+      <button class="btn primary" id="genPrompt">✨ 生成搭配</button>
+    </div>
+    <div id="autoBox" style="display:none">
+      <p class="note">从你衣橱现有的衣服里，自动组合出几套日常可穿的 look。</p>
+      <button class="btn primary" id="genAuto">🎲 给我几套搭配</button>
+    </div>
+    <div id="outfitOut" style="margin-top:18px"></div>
+  </section>
+
+  <!-- 淘汰 -->
+  <section id="v-retire" class="view">
+    <p class="note" id="retireHint"></p>
+    <div id="retireList"></div>
+  </section>
+
+  <!-- 我的/设置 -->
+  <section id="v-me" class="view">
+    <label>API Key</label>
+    <input type="text" id="s-key" placeholder="粘贴你的 key，仅存在本机浏览器">
+    <label>对话模型（用于搭配/推荐）</label>
+    <input type="text" id="s-model" placeholder="qwen3-max">
+    <label>识图模型（用于拍照自动打标，需 key 已覆盖）</label>
+    <input type="text" id="s-vmodel" placeholder="qwen-vl-max">
+    <label>API 地址</label>
+    <input type="text" id="s-base" placeholder="https://www.packyapi.com">
+    <button class="btn primary" id="saveSettings">保存设置</button>
+    <p class="note">⚠️ 首次使用请在上方填入你的 API Key（只存在你这台手机的浏览器，不会上传、也不在源码里）。模型默认 qwen3-max。<br>淘汰阈值：超过 <b id="thrShow">60</b> 天没穿会被标红建议清理。</p>
+    <label>多少天没穿算"该淘汰"</label>
+    <input type="text" id="s-thr" placeholder="60" inputmode="numeric">
+    <div class="btnrow" style="margin-top:22px">
+      <button class="btn ghost" id="exportBtn">导出备份</button>
+      <button class="btn danger" id="wipeBtn">清空全部</button>
+    </div>
+    <p class="note" id="meStat"></p>
+  </section>
+</div>
+
+<!-- 详情弹窗 -->
+<div class="modal" id="detailModal"><div class="sheet" id="detailSheet"></div></div>
+
+<!-- nav -->
+<nav class="nav" id="nav">
+  <button class="on" data-v="closet"><span class="ic">🚪</span>衣橱</button>
+  <button data-v="add"><span class="ic">➕</span>添加</button>
+  <button data-v="style"><span class="ic">✨</span>搭配</button>
+  <button data-v="retire"><span class="ic">🗑️</span>淘汰</button>
+  <button data-v="me"><span class="ic">⚙️</span>我的</button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+//// ---------- 常量 ----------
+const CATS=["上衣","T恤","衬衫","毛衣","外套","裤子","裙子","连衣裙","鞋","包","配饰"];
+const COLORS=["黑","白","灰","藏蓝","蓝","米/卡其","棕","绿","红","粉","黄","紫","花色"];
+const SEASONS=["春","夏","秋","冬"];
+const STYLES=["休闲","通勤","运动","正式","街头","度假","约会","居家"];
+const EMOJI={"上衣":"👕","T恤":"👕","衬衫":"👔","毛衣":"🧶","外套":"🧥","裤子":"👖","裙子":"👗","连衣裙":"👗","鞋":"👟","包":"👜","配饰":"🧢"};
+
+//// ---------- IndexedDB ----------
+const DB="wardrobe",STORE="items";
+let _db;
+function db(){return new Promise((res,rej)=>{if(_db)return res(_db);const r=indexedDB.open(DB,1);r.onupgradeneeded=e=>{e.target.result.createObjectStore(STORE,{keyPath:"id"})};r.onsuccess=e=>{_db=e.target.result;res(_db)};r.onerror=e=>rej(e)})}
+async function tx(mode){return (await db()).transaction(STORE,mode).objectStore(STORE)}
+async function allItems(){const s=await tx("readonly");return new Promise(r=>{const o=s.getAll();o.onsuccess=()=>r(o.result||[])})}
+async function putItem(it){const s=await tx("readwrite");return new Promise(r=>{const o=s.put(it);o.onsuccess=()=>r()})}
+async function delItem(id){const s=await tx("readwrite");return new Promise(r=>{const o=s.delete(id);o.onsuccess=()=>r()})}
+
+//// ---------- 设置 ----------
+const LS=localStorage;
+const DEFAULTS={key:"",model:"qwen3-max",vmodel:"qwen-vl-max",base:"https://www.packyapi.com",thr:"60"};
+function getCfg(){return{key:LS.getItem("w_key")??DEFAULTS.key,model:LS.getItem("w_model")||DEFAULTS.model,vmodel:LS.getItem("w_vmodel")||DEFAULTS.vmodel,base:LS.getItem("w_base")||DEFAULTS.base,thr:parseInt(LS.getItem("w_thr")||DEFAULTS.thr)}}
+
+//// ---------- 工具 ----------
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const today=()=>new Date().toISOString().slice(0,10);
+function daysSince(d){if(!d)return null;return Math.floor((Date.now()-new Date(d).getTime())/864e5)}
+let _t;function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(_t);_t=setTimeout(()=>t.classList.remove("on"),1800)}
+function emoji(c){return EMOJI[c]||"👕"}
+
+// 图片压缩
+function fileToThumb(file,max=900){return new Promise(res=>{const img=new Image();const fr=new FileReader();fr.onload=()=>{img.onload=()=>{let{width:w,height:h}=img;if(w>h&&w>max){h=h*max/w;w=max}else if(h>max){w=w*max/h;h=max}const c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);res(c.toDataURL("image/jpeg",0.82))};img.src=fr.result};fr.readAsDataURL(file)})}
+
+//// ---------- 状态 ----------
+let ITEMS=[],filter="全部",draftPhoto=null,styleMode="prompt";
+
+//// ---------- 渲染：衣橱 ----------
+function renderFilters(){
+  const cats=["全部",...CATS.filter(c=>ITEMS.some(i=>i.category===c&&!i.retired))];
+  $("#filters").innerHTML=cats.map(c=>`<div class="chip ${c===filter?'on':''}" data-c="${c}">${c}</div>`).join("");
+}
+function renderCloset(){
+  const list=ITEMS.filter(i=>!i.retired&&(filter==="全部"||i.category===filter)).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  $("#closetEmpty").style.display=ITEMS.filter(i=>!i.retired).length?"none":"block";
+  $("#grid").innerHTML=list.map(i=>{
+    const tg=[i.category,...(i.colors||[]).slice(0,1),...(i.styles||[]).slice(0,1)].filter(Boolean).join(" · ");
+    const ph=i.photo?`<img class="ph" src="${i.photo}">`:`<div class="noph">${emoji(i.category)}</div>`;
+    const wc=i.wearCount?`<div class="worn">穿过 ${i.wearCount} 次</div>`:"";
+    return `<div class="item" data-id="${i.id}">${ph}${wc}<div class="meta"><div class="nm">${esc(i.name||i.category||"未命名")}</div><div class="tg">${esc(tg)}</div></div></div>`;
+  }).join("");
+  $("#cnt").textContent=ITEMS.filter(i=>!i.retired).length?`${ITEMS.filter(i=>!i.retired).length} 件`:"";
+}
+function esc(s){return(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+
+//// ---------- 渲染：添加表单 ----------
+let sel={category:"",colors:[],seasons:[],styles:[]};
+function buildTagRows(){
+  $("#catRow").innerHTML=CATS.map(c=>`<div class="tag" data-g="category" data-v="${c}">${emoji(c)} ${c}</div>`).join("");
+  $("#colorRow").innerHTML=COLORS.map(c=>`<div class="tag" data-g="colors" data-v="${c}">${c}</div>`).join("");
+  $("#seasonRow").innerHTML=SEASONS.map(c=>`<div class="tag" data-g="seasons" data-v="${c}">${c}</div>`).join("");
+  $("#styleRow").innerHTML=STYLES.map(c=>`<div class="tag" data-g="styles" data-v="${c}">${c}</div>`).join("");
+}
+function syncTagUI(){
+  $$("#v-add .tag").forEach(t=>{const g=t.dataset.g,v=t.dataset.v;const on=g==="category"?sel.category===v:sel[g].includes(v);t.classList.toggle("on",on)})
+}
+function resetForm(){sel={category:"",colors:[],seasons:[],styles:[]};draftPhoto=null;$("#f-name").value="";$("#f-notes").value="";$("#photopick").querySelector("img")?.remove();$("#photopick").querySelectorAll("span").forEach(s=>s.style.display="");syncTagUI()}
+
+//// ---------- 详情 ----------
+function openDetail(id){
+  const i=ITEMS.find(x=>x.id===id);if(!i)return;
+  const ph=i.photo?`<img class="dph" src="${i.photo}">`:`<div class="dph" style="display:flex;align-items:center;justify-content:center;font-size:80px;color:#334155">${emoji(i.category)}</div>`;
+  const pills=[i.category,...(i.colors||[]),...(i.seasons||[]).map(s=>s+"季"),...(i.styles||[])].filter(Boolean).map(p=>`<span class="pill">${esc(p)}</span>`).join("");
+  const ds=daysSince(i.lastWorn);
+  $("#detailSheet").innerHTML=`<div class="grab"></div>${ph}
+    <div class="dtitle">${esc(i.name||i.category||"未命名")}</div>
+    <div class="pills">${pills}</div>
+    ${i.notes?`<p class="note">📝 ${esc(i.notes)}</p>`:""}
+    <div class="stat"><div><div class="n">${i.wearCount||0}</div><div class="l">总穿着次数</div></div><div><div class="n">${ds===null?"—":ds+"天"}</div><div class="l">上次穿到现在</div></div></div>
+    <button class="btn primary" id="wearBtn">✅ 今天穿了它</button>
+    <div class="btnrow"><button class="btn ghost" id="editBtn">编辑</button><button class="btn danger" id="delBtn">删除</button></div>
+    <div class="note" style="text-align:center">穿着记录：${(i.wornDates||[]).slice(-6).reverse().join("、")||"还没穿过"}</div>`;
+  $("#detailModal").classList.add("on");
+  $("#wearBtn").onclick=async()=>{i.wornDates=i.wornDates||[];if(i.wornDates[i.wornDates.length-1]!==today()){i.wornDates.push(today());i.wearCount=(i.wearCount||0)+1}i.lastWorn=today();i.retired=false;await putItem(i);await reload();toast("已记录：今天穿了 👕");openDetail(id)};
+  $("#delBtn").onclick=async()=>{if(confirm("确定删除这件衣服？")){await delItem(id);$("#detailModal").classList.remove("on");await reload();toast("已删除")}};
+  $("#editBtn").onclick=()=>{loadIntoForm(i);$("#detailModal").classList.remove("on");switchView("add");toast("编辑中，改完点保存")};
+}
+let editingId=null;
+function loadIntoForm(i){editingId=i.id;sel={category:i.category||"",colors:[...(i.colors||[])],seasons:[...(i.seasons||[])],styles:[...(i.styles||[])]};draftPhoto=i.photo||null;$("#f-name").value=i.name||"";$("#f-notes").value=i.notes||"";const pp=$("#photopick");pp.querySelectorAll("span").forEach(s=>s.style.display="none");let im=pp.querySelector("img");if(draftPhoto){if(!im){im=document.createElement("img");pp.insertBefore(im,pp.firstChild)}im.src=draftPhoto}else if(im)im.remove();syncTagUI()}
+
+//// ---------- 淘汰 ----------
+function renderRetire(){
+  const thr=getCfg().thr;
+  const act=ITEMS.filter(i=>!i.retired);
+  const ranked=act.map(i=>({i,d:i.lastWorn?daysSince(i.lastWorn):(i.createdAt?daysSince(new Date(i.createdAt).toISOString()):999)})).sort((a,b)=>b.d-a.d);
+  $("#retireHint").innerHTML=`按"最久没穿"排序。超过 <b>${thr}</b> 天没穿的标红，建议考虑淘汰（可在「我的」改阈值）。`;
+  if(!ranked.length){$("#retireList").innerHTML='<div class="empty">还没有衣服可分析</div>';return}
+  $("#retireList").innerHTML=ranked.map(({i,d})=>{
+    const cls=d>=thr?"days-bad":d>=Math.floor(thr/2)?"days-warn":"days-ok";
+    const txt=i.wearCount?`${d} 天没穿 · 共穿过${i.wearCount}次`:`从没穿过 · 已入橱${d}天`;
+    const ph=i.photo?`<img src="${i.photo}">`:`<div class="nop">${emoji(i.category)}</div>`;
+    return `<div class="retire"><div data-id="${i.id}" class="rclick" style="display:flex;gap:12px;align-items:center;flex:1;min-width:0">${ph}<div class="ri"><div class="nm">${esc(i.name||i.category)}</div><div class="d ${cls}">${txt}</div></div></div><button class="btn danger" style="width:auto;margin:0;padding:8px 12px;font-size:13px" data-retire="${i.id}">淘汰</button></div>`;
+  }).join("");
+  $$("[data-retire]").forEach(b=>b.onclick=async()=>{const it=ITEMS.find(x=>x.id===b.dataset.retire);it.retired=true;await putItem(it);await reload();toast("已移出衣橱（在导出备份里仍保留）")});
+  $$("#retireList .rclick").forEach(b=>b.onclick=()=>openDetail(b.dataset.id));
+}
+
+//// ---------- AI API（OpenAI 兼容格式 / packy + 通义千问）----------
+async function callAI({system,user,image=null,maxTok=1500,vision=false}){
+  const c=getCfg();if(!c.key)throw new Error("还没填 key（去「我的」里填）");
+  const model=vision?c.vmodel:c.model;
+  const content=image?[{type:"text",text:user},{type:"image_url",image_url:{url:image}}]:user;
+  const messages=[];if(system)messages.push({role:"system",content:system});messages.push({role:"user",content});
+  const r=await fetch(c.base.replace(/\/$/,"")+"/v1/chat/completions",{method:"POST",headers:{"content-type":"application/json","Authorization":"Bearer "+c.key},body:JSON.stringify({model,max_tokens:maxTok,messages})});
+  const j=await r.json().catch(()=>null);
+  if(!r.ok||!j||j.error){const m=(j&&j.error&&j.error.message)||("HTTP "+r.status);throw new Error(m.slice(0,160))}
+  return (j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||"";
+}
+function parseJSON(s){const m=s.match(/```(?:json)?\s*([\s\S]*?)```/);const raw=m?m[1]:s;const a=raw.indexOf("{"),b=raw.lastIndexOf("}");try{return JSON.parse(raw.slice(a,b+1))}catch(e){return null}}
+
+// AI 识别打标
+async function aiTag(){
+  if(!draftPhoto)return toast("先拍/选一张照片");
+  const c=getCfg();if(!c.key)return toast("先去「我的」填 Claude key");
+  const btn=$("#aiTagBtn");btn.innerHTML='<span class="spin"></span> 识别中…';
+  try{
+    const sys=`你是服装识别助手。看图后只输出 JSON（不要多余文字）：{"name":"简短中文名","category":从${JSON.stringify(CATS)}选一个,"colors":从${JSON.stringify(COLORS)}选1-2个,"seasons":从${JSON.stringify(SEASONS)}选,"styles":从${JSON.stringify(STYLES)}选1-2个}`;
+    const txt=await callAI({system:sys,user:"识别这件单品，按要求输出JSON",image:draftPhoto,vision:true,maxTok:500});
+    const j=parseJSON(txt);if(!j)throw new Error("没解析出结果");
+    if(j.name&&!$("#f-name").value)$("#f-name").value=j.name;
+    if(j.category&&CATS.includes(j.category))sel.category=j.category;
+    if(Array.isArray(j.colors))sel.colors=j.colors.filter(x=>COLORS.includes(x));
+    if(Array.isArray(j.seasons))sel.seasons=j.seasons.filter(x=>SEASONS.includes(x));
+    if(Array.isArray(j.styles))sel.styles=j.styles.filter(x=>STYLES.includes(x));
+    syncTagUI();toast("AI 识别完成 ✨ 可手动微调");
+  }catch(e){const m=e.message||"";toast(/未覆盖|渠道|distributor/.test(m)?"识图模型未开通，去 packy 给 key 勾上 qwen-vl-max；先手动打标也行":"识别失败："+m.slice(0,40))}
+  btn.innerHTML="✨ AI 自动识别打标（拍照后点这里）";
+}
+
+// 生成搭配
+function wardrobeForPrompt(){return ITEMS.filter(i=>!i.retired).map(i=>({id:i.id,name:i.name||i.category,category:i.category,colors:i.colors,seasons:i.seasons,styles:i.styles}))}
+async function genOutfits(scene){
+  const items=wardrobeForPrompt();
+  if(items.length<3)return toast("衣橱里至少先放3件衣服再搭配哦");
+  const out=$("#outfitOut");out.innerHTML='<p class="note"><span class="spin"></span> Claude 正在翻你的衣橱搭配…</p>';
+  const sys=`你是私人穿搭师。下面是用户衣橱的全部单品(JSON)。${scene?"根据用户场景":"组合日常可穿的搭配"}，只能使用这些单品(用它们的id)，每套3-5件。严格输出JSON：{"outfits":[{"title":"短标题","items":["id1","id2"],"why":"为什么这样搭(一句话,中文)","missing":"如果衣橱缺了关键单品可建议补什么,没有就空字符串"}]}。${scene?"":"给3套。"}衣橱：`+JSON.stringify(items);
+  const usr=scene?`场景/需求：${scene}`:"请给我几套搭配";
+  try{
+    const txt=await callAI({system:sys,user:usr,maxTok:2000});
+    const j=parseJSON(txt);if(!j||!j.outfits)throw new Error("没解析出搭配");
+    renderOutfits(j.outfits);
+  }catch(e){out.innerHTML=`<p class="note" style="color:var(--bad)">生成失败：${esc(e.message.slice(0,120))}</p>`}
+}
+function renderOutfits(outfits){
+  const byId=Object.fromEntries(ITEMS.map(i=>[i.id,i]));
+  $("#outfitOut").innerHTML=outfits.map(o=>{
+    const pieces=(o.items||[]).map(id=>{const i=byId[id];if(!i)return"";const ph=i.photo?`<img src="${i.photo}">`:`<div class="nop">${emoji(i.category)}</div>`;return `<div class="piece" data-id="${id}">${ph}<span>${esc(i.name||i.category)}</span></div>`}).join("");
+    return `<div class="outfit"><h3>${esc(o.title||"搭配")}</h3><div class="why">${esc(o.why||"")}</div><div class="pieces">${pieces}</div>${o.missing?`<div class="miss">💡 建议补：${esc(o.missing)}</div>`:""}</div>`;
+  }).join("")||'<p class="note">没生成出搭配，换个说法再试</p>';
+  $$("#outfitOut .piece").forEach(p=>p.onclick=()=>openDetail(p.dataset.id));
+}
+
+//// ---------- 视图切换 ----------
+function switchView(v){
+  $$(".view").forEach(s=>s.classList.remove("on"));$("#v-"+v).classList.add("on");
+  $$("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
+  const titles={closet:"👕 我的衣橱",add:editingId?"✏️ 编辑单品":"➕ 添加单品",style:"✨ AI 搭配",retire:"🗑️ 淘汰建议",me:"⚙️ 我的设置"};
+  $("#ttl").textContent=titles[v];
+  if(v==="retire")renderRetire();
+  if(v==="closet"){renderFilters();renderCloset()}
+  if(v==="add"&&!editingId){/*keep draft*/}
+  window.scrollTo(0,0);
+}
+
+//// ---------- 重载 ----------
+async function reload(){ITEMS=await allItems();renderFilters();renderCloset();const me=$("#meStat");if(me)me.textContent=`共 ${ITEMS.length} 件（含已淘汰 ${ITEMS.filter(i=>i.retired).length}）`}
+
+//// ---------- 事件绑定 ----------
+function bind(){
+  $("#nav").onclick=e=>{const b=e.target.closest("button");if(b){if(b.dataset.v!=="add")editingId=null;switchView(b.dataset.v)}};
+  $("#filters").onclick=e=>{const c=e.target.closest(".chip");if(c){filter=c.dataset.c;renderFilters();renderCloset()}};
+  $("#grid").onclick=e=>{const it=e.target.closest(".item");if(it)openDetail(it.dataset.id)};
+  $("#detailModal").onclick=e=>{if(e.target.id==="detailModal")$("#detailModal").classList.remove("on")};
+
+  // 照片
+  $("#photoInput").onchange=async e=>{const f=e.target.files[0];if(!f)return;draftPhoto=await fileToThumb(f);const pp=$("#photopick");pp.querySelectorAll("span").forEach(s=>s.style.display="none");let im=pp.querySelector("img");if(!im){im=document.createElement("img");pp.insertBefore(im,pp.firstChild)}im.src=draftPhoto};
+  $("#aiTagBtn").onclick=aiTag;
+
+  // tag 选择
+  $("#v-add").addEventListener("click",e=>{const t=e.target.closest(".tag");if(!t)return;const g=t.dataset.g,v=t.dataset.v;if(g==="category"){sel.category=sel.category===v?"":v}else{const a=sel[g];const i=a.indexOf(v);i>=0?a.splice(i,1):a.push(v)}syncTagUI()});
+
+  $("#addCancel").onclick=()=>{editingId=null;resetForm();toast("已清空")};
+  $("#addSave").onclick=async()=>{
+    const name=$("#f-name").value.trim();
+    if(!sel.category&&!name)return toast("至少填个名称或选个品类");
+    let it=editingId?ITEMS.find(x=>x.id===editingId):null;
+    if(!it){it={id:uid(),createdAt:Date.now(),wornDates:[],wearCount:0,lastWorn:null,retired:false}}
+    it.name=name;it.category=sel.category;it.colors=[...sel.colors];it.seasons=[...sel.seasons];it.styles=[...sel.styles];it.notes=$("#f-notes").value.trim();if(draftPhoto)it.photo=draftPhoto;
+    await putItem(it);await reload();const wasEdit=!!editingId;editingId=null;resetForm();switchView("closet");toast(wasEdit?"已更新 ✅":"已加入衣橱 ✅");
+  };
+
+  // 搭配
+  $(".seg").onclick=e=>{const b=e.target.closest("button");if(!b)return;styleMode=b.dataset.mode;$$(".seg button").forEach(x=>x.classList.toggle("on",x===b));$("#promptBox").style.display=styleMode==="prompt"?"block":"none";$("#autoBox").style.display=styleMode==="auto"?"block":"none"};
+  $("#genPrompt").onclick=()=>{const s=$("#promptInput").value.trim();if(!s)return toast("先描述下场景");genOutfits(s)};
+  $("#genAuto").onclick=()=>genOutfits("");
+
+  // 设置
+  const c=getCfg();$("#s-key").value=c.key;$("#s-model").value=c.model;$("#s-vmodel").value=c.vmodel;$("#s-base").value=c.base;$("#s-thr").value=c.thr;$("#thrShow").textContent=c.thr;
+  $("#saveSettings").onclick=()=>{LS.setItem("w_key",$("#s-key").value.trim());LS.setItem("w_model",$("#s-model").value.trim()||DEFAULTS.model);LS.setItem("w_vmodel",$("#s-vmodel").value.trim()||DEFAULTS.vmodel);LS.setItem("w_base",$("#s-base").value.trim()||DEFAULTS.base);const thr=parseInt($("#s-thr").value)||60;LS.setItem("w_thr",thr);$("#thrShow").textContent=thr;toast("设置已保存 ✅")};
+  $("#exportBtn").onclick=async()=>{const data=JSON.stringify(await allItems());const blob=new Blob([data],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="wardrobe-backup-"+today()+".json";a.click();toast("已导出备份")};
+  $("#wipeBtn").onclick=async()=>{if(confirm("清空全部衣服？不可恢复（建议先导出备份）")){for(const i of ITEMS)await delItem(i.id);await reload();toast("已清空")}};
+}
+
+//// ---------- init ----------
+(async function(){buildTagRows();syncTagUI();bind();await reload();
+  if("serviceWorker"in navigator){try{await navigator.serviceWorker.register("sw.js")}catch(e){}}
+})();
+</script>
+</body>
+</html>
