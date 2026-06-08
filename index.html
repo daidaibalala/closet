@@ -80,6 +80,16 @@
   .piece img,.piece .nop{width:84px;height:108px;border-radius:10px;object-fit:cover;background:#0b1120;display:flex;align-items:center;justify-content:center;font-size:26px;color:#334155}
   .piece span{display:block;font-size:11px;color:var(--mut);margin-top:4px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .miss{font-size:11px;color:var(--warn)}
+  .shopwrap{margin-top:12px;padding-top:10px;border-top:1px dashed #334155}
+  .shoptitle{font-size:12px;color:var(--warn);margin-bottom:8px}
+  .shopitem{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;flex-wrap:wrap}
+  .shopitem .sn{font-size:13px;color:#cbd5e1}
+  .shopitem .sl{display:flex;gap:6px}
+  .shoplink{font-size:11.5px;padding:4px 9px;border-radius:8px;text-decoration:none;white-space:nowrap}
+  .shoplink.tb{background:#ff6a0022;color:#ff9a52;border:1px solid #9a4a10}
+  .shoplink.xhs{background:#ff244422;color:#ff6b85;border:1px solid #7f1d2a}
+  .savebtn{margin-top:12px;width:100%;padding:11px;border-radius:10px;border:1px solid #7f1d3a;background:rgba(251,113,133,.12);color:#fb7185;font-family:inherit;font-size:14px;font-weight:600}
+  .savebtn:disabled{background:#16321f;border-color:#14532d;color:#4ade80}
 
   .retire{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px;margin-bottom:10px}
   .retire img,.retire .nop{width:58px;height:74px;border-radius:10px;object-fit:cover;flex:none;background:#0b1120;display:flex;align-items:center;justify-content:center;font-size:22px;color:#334155}
@@ -144,7 +154,7 @@
 
   <!-- 搭配 -->
   <section id="v-style" class="view">
-    <div class="seg"><button class="on" data-mode="prompt">按需求推荐</button><button data-mode="auto">智能搭配</button></div>
+    <div class="seg"><button class="on" data-mode="prompt">按需求推荐</button><button data-mode="auto">智能搭配</button><button data-mode="saved">⭐ 收藏</button></div>
     <div id="promptBox">
       <label>说出你的场景</label>
       <textarea id="promptInput" placeholder="例：周末去内蒙大草原，帮我推荐4套草原穿搭，要好拍照又防晒"></textarea>
@@ -153,6 +163,10 @@
     <div id="autoBox" style="display:none">
       <p class="note">从你衣橱现有的衣服里，自动组合出几套日常可穿的 look。</p>
       <button class="btn primary" id="genAuto">🎲 给我几套搭配</button>
+    </div>
+    <div id="savedBox" style="display:none">
+      <p class="note">你收藏的搭配（点❤️保存的）。点「✅ 今天穿这套」会给这套里的每件衣服都记一次穿着。</p>
+      <div id="savedOut"></div>
     </div>
     <div id="outfitOut" style="margin-top:18px"></div>
   </section>
@@ -208,13 +222,16 @@ const STYLES=["休闲","通勤","运动","正式","街头","度假","约会","�
 const EMOJI={"上衣":"👕","T恤":"👕","衬衫":"👔","毛衣":"🧶","外套":"🧥","裤子":"👖","裙子":"👗","连衣裙":"👗","鞋":"👟","包":"👜","配饰":"🧢"};
 
 //// ---------- IndexedDB ----------
-const DB="wardrobe",STORE="items";
+const DB="wardrobe",STORE="items",OUTF="outfits";
 let _db;
-function db(){return new Promise((res,rej)=>{if(_db)return res(_db);const r=indexedDB.open(DB,1);r.onupgradeneeded=e=>{e.target.result.createObjectStore(STORE,{keyPath:"id"})};r.onsuccess=e=>{_db=e.target.result;res(_db)};r.onerror=e=>rej(e)})}
-async function tx(mode){return (await db()).transaction(STORE,mode).objectStore(STORE)}
-async function allItems(){const s=await tx("readonly");return new Promise(r=>{const o=s.getAll();o.onsuccess=()=>r(o.result||[])})}
-async function putItem(it){const s=await tx("readwrite");return new Promise(r=>{const o=s.put(it);o.onsuccess=()=>r()})}
-async function delItem(id){const s=await tx("readwrite");return new Promise(r=>{const o=s.delete(id);o.onsuccess=()=>r()})}
+function db(){return new Promise((res,rej)=>{if(_db)return res(_db);const r=indexedDB.open(DB,2);r.onupgradeneeded=e=>{const d=e.target.result;if(!d.objectStoreNames.contains(STORE))d.createObjectStore(STORE,{keyPath:"id"});if(!d.objectStoreNames.contains(OUTF))d.createObjectStore(OUTF,{keyPath:"id"})};r.onsuccess=e=>{_db=e.target.result;res(_db)};r.onerror=e=>rej(e)})}
+async function tx(store,mode){return (await db()).transaction(store,mode).objectStore(store)}
+async function allItems(){const s=await tx(STORE,"readonly");return new Promise(r=>{const o=s.getAll();o.onsuccess=()=>r(o.result||[])})}
+async function putItem(it){const s=await tx(STORE,"readwrite");return new Promise(r=>{const o=s.put(it);o.onsuccess=()=>r()})}
+async function delItem(id){const s=await tx(STORE,"readwrite");return new Promise(r=>{const o=s.delete(id);o.onsuccess=()=>r()})}
+async function allOutfits(){const s=await tx(OUTF,"readonly");return new Promise(r=>{const o=s.getAll();o.onsuccess=()=>r(o.result||[])})}
+async function putOutfit(o2){const s=await tx(OUTF,"readwrite");return new Promise(r=>{const o=s.put(o2);o.onsuccess=()=>r()})}
+async function delOutfit(id){const s=await tx(OUTF,"readwrite");return new Promise(r=>{const o=s.delete(id);o.onsuccess=()=>r()})}
 
 //// ---------- 设置 ----------
 const LS=localStorage;
@@ -343,7 +360,7 @@ async function genOutfits(scene){
   const items=wardrobeForPrompt();
   if(items.length<3)return toast("衣橱里至少先放3件衣服再搭配哦");
   const out=$("#outfitOut");out.innerHTML='<p class="note"><span class="spin"></span> Claude 正在翻你的衣橱搭配…</p>';
-  const sys=`你是私人穿搭师。下面是用户衣橱的全部单品(JSON)。${scene?"根据用户场景":"组合日常可穿的搭配"}，只能使用这些单品(用它们的id)，每套3-5件。严格输出JSON：{"outfits":[{"title":"短标题","items":["id1","id2"],"why":"为什么这样搭(一句话,中文)","missing":"如果衣橱缺了关键单品可建议补什么,没有就空字符串"}]}。${scene?"":"给3套。"}衣橱：`+JSON.stringify(items);
+  const sys=`你是私人穿搭师。下面是用户衣橱的全部单品(JSON)。${scene?"根据用户场景搭配，优先用衣橱里的单品；如果场景需要而衣橱缺关键单品，可以在 shop 里建议要买的新单品":"只用衣橱现有单品组合日常可穿的搭配"}。owned 里放衣橱已有单品的id，每套搭配 owned+shop 合计3-5件。严格输出JSON：{"outfits":[{"title":"短标题","why":"为什么这样搭(一句话,中文)","items":["衣橱已有单品的id"],"shop":[{"name":"建议购买的单品中文名","keyword":"用于电商搜索的关键词"}]}]}。shop 没有就给空数组[]。${scene?"":"给3套，shop都留空[]。"}衣橱：`+JSON.stringify(items);
   const usr=scene?`场景/需求：${scene}`:"请给我几套搭配";
   try{
     const txt=await callAI({system:sys,user:usr,maxTok:2000});
@@ -351,13 +368,28 @@ async function genOutfits(scene){
     renderOutfits(j.outfits);
   }catch(e){out.innerHTML=`<p class="note" style="color:var(--bad)">生成失败：${esc(e.message.slice(0,120))}</p>`}
 }
-function renderOutfits(outfits){
+function searchLinks(keyword){const q=encodeURIComponent(keyword||"");return `<a class="shoplink tb" href="https://uland.taobao.com/sem/tbsearch?keyword=${q}" target="_blank" rel="noopener">🛒淘宝</a><a class="shoplink xhs" href="https://www.xiaohongshu.com/search_result?keyword=${q}" target="_blank" rel="noopener">📕小红书</a>`}
+function outfitCardHTML(o,mode){
   const byId=Object.fromEntries(ITEMS.map(i=>[i.id,i]));
-  $("#outfitOut").innerHTML=outfits.map(o=>{
-    const pieces=(o.items||[]).map(id=>{const i=byId[id];if(!i)return"";const ph=i.photo?`<img src="${i.photo}">`:`<div class="nop">${emoji(i.category)}</div>`;return `<div class="piece" data-id="${id}">${ph}<span>${esc(i.name||i.category)}</span></div>`}).join("");
-    return `<div class="outfit"><h3>${esc(o.title||"搭配")}</h3><div class="why">${esc(o.why||"")}</div><div class="pieces">${pieces}</div>${o.missing?`<div class="miss">💡 建议补：${esc(o.missing)}</div>`:""}</div>`;
-  }).join("")||'<p class="note">没生成出搭配，换个说法再试</p>';
-  $$("#outfitOut .piece").forEach(p=>p.onclick=()=>openDetail(p.dataset.id));
+  const pieces=(o.items||[]).map(id=>{const i=byId[id];if(!i)return"";const ph=i.photo?`<img src="${i.photo}">`:`<div class="nop">${emoji(i.category)}</div>`;return `<div class="piece" data-id="${id}">${ph}<span>${esc(i.name||i.category)}</span></div>`}).join("");
+  const shop=(o.shop||[]).filter(s=>s&&s.name).map(s=>`<div class="shopitem"><span class="sn">🛍️ ${esc(s.name)}</span><span class="sl">${searchLinks(s.keyword||s.name)}</span></div>`).join("");
+  let actions="";
+  if(mode==="gen")actions=`<button class="savebtn" data-save="${encodeURIComponent(JSON.stringify({title:o.title,why:o.why,items:o.items||[],shop:o.shop||[]}))}">❤️ 保存这套</button>`;
+  else if(mode==="saved")actions=`<div class="btnrow" style="margin-top:12px"><button class="btn ghost wearset" data-id="${o.id}">✅ 今天穿这套</button><button class="btn danger delset" data-id="${o.id}" style="flex:0 0 auto;padding:14px 16px">🗑️</button></div>`;
+  return `<div class="outfit"><h3>${esc(o.title||"搭配")}</h3><div class="why">${esc(o.why||"")}</div>${pieces?`<div class="pieces">${pieces}</div>`:""}${shop?`<div class="shopwrap"><div class="shoptitle">👜 衣橱里没有，可搜同款</div>${shop}</div>`:""}${actions}</div>`;
+}
+function bindOutfitPieces(scope){$$(scope+" .piece").forEach(p=>p.onclick=()=>openDetail(p.dataset.id))}
+function renderOutfits(outfits){
+  $("#outfitOut").innerHTML=outfits.map(o=>outfitCardHTML(o,"gen")).join("")||'<p class="note">没生成出搭配，换个说法再试</p>';
+  bindOutfitPieces("#outfitOut");
+  $$("#outfitOut .savebtn").forEach(b=>b.onclick=async()=>{const o=JSON.parse(decodeURIComponent(b.dataset.save));o.id=uid();o.savedAt=Date.now();await putOutfit(o);b.textContent="✅ 已收藏";b.disabled=true;toast("已存到「⭐收藏」")});
+}
+async function renderSaved(){
+  const saved=(await allOutfits()).sort((a,b)=>(b.savedAt||0)-(a.savedAt||0));
+  $("#savedOut").innerHTML=saved.length?saved.map(o=>outfitCardHTML(o,"saved")).join(""):'<div class="empty">还没收藏搭配 👀<br>去「按需求推荐」生成后，点❤️保存喜欢的那套</div>';
+  bindOutfitPieces("#savedOut");
+  $$("#savedOut .wearset").forEach(b=>b.onclick=async()=>{const o=(await allOutfits()).find(x=>x.id===b.dataset.id);if(!o)return;let n=0;for(const id of (o.items||[])){const it=ITEMS.find(x=>x.id===id);if(!it)continue;it.wornDates=it.wornDates||[];if(it.wornDates[it.wornDates.length-1]!==today()){it.wornDates.push(today());it.wearCount=(it.wearCount||0)+1}it.lastWorn=today();it.retired=false;await putItem(it);n++}await reload();toast(`记录完成：这套 ${n} 件都记了今天穿 👕`)});
+  $$("#savedOut .delset").forEach(b=>b.onclick=async()=>{if(confirm("删除这个收藏搭配？（不影响衣橱里的衣服）")){await delOutfit(b.dataset.id);renderSaved();toast("已删除收藏")}});
 }
 
 //// ---------- 视图切换 ----------
@@ -400,15 +432,15 @@ function bind(){
   };
 
   // 搭配
-  $(".seg").onclick=e=>{const b=e.target.closest("button");if(!b)return;styleMode=b.dataset.mode;$$(".seg button").forEach(x=>x.classList.toggle("on",x===b));$("#promptBox").style.display=styleMode==="prompt"?"block":"none";$("#autoBox").style.display=styleMode==="auto"?"block":"none"};
+  $(".seg").onclick=e=>{const b=e.target.closest("button");if(!b)return;styleMode=b.dataset.mode;$$(".seg button").forEach(x=>x.classList.toggle("on",x===b));$("#promptBox").style.display=styleMode==="prompt"?"block":"none";$("#autoBox").style.display=styleMode==="auto"?"block":"none";$("#savedBox").style.display=styleMode==="saved"?"block":"none";$("#outfitOut").style.display=styleMode==="saved"?"none":"block";if(styleMode==="saved")renderSaved()};
   $("#genPrompt").onclick=()=>{const s=$("#promptInput").value.trim();if(!s)return toast("先描述下场景");genOutfits(s)};
   $("#genAuto").onclick=()=>genOutfits("");
 
   // 设置
   const c=getCfg();$("#s-key").value=c.key;$("#s-model").value=c.model;$("#s-vmodel").value=c.vmodel;$("#s-base").value=c.base;$("#s-thr").value=c.thr;$("#thrShow").textContent=c.thr;
   $("#saveSettings").onclick=()=>{LS.setItem("w_key",$("#s-key").value.trim());LS.setItem("w_model",$("#s-model").value.trim()||DEFAULTS.model);LS.setItem("w_vmodel",$("#s-vmodel").value.trim()||DEFAULTS.vmodel);LS.setItem("w_base",$("#s-base").value.trim()||DEFAULTS.base);const thr=parseInt($("#s-thr").value)||60;LS.setItem("w_thr",thr);$("#thrShow").textContent=thr;toast("设置已保存 ✅")};
-  $("#exportBtn").onclick=async()=>{const data=JSON.stringify(await allItems());const blob=new Blob([data],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="wardrobe-backup-"+today()+".json";a.click();toast("已导出备份")};
-  $("#wipeBtn").onclick=async()=>{if(confirm("清空全部衣服？不可恢复（建议先导出备份）")){for(const i of ITEMS)await delItem(i.id);await reload();toast("已清空")}};
+  $("#exportBtn").onclick=async()=>{const data=JSON.stringify({items:await allItems(),outfits:await allOutfits()});const blob=new Blob([data],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="wardrobe-backup-"+today()+".json";a.click();toast("已导出备份（含衣服+收藏搭配）")};
+  $("#wipeBtn").onclick=async()=>{if(confirm("清空全部衣服？不可恢复（建议先导出备份）")){for(const i of ITEMS)await delItem(i.id);for(const o of await allOutfits())await delOutfit(o.id);await reload();toast("已清空")}};
 }
 
 //// ---------- init ----------
